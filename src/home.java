@@ -1,15 +1,27 @@
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.LinkedList;
+import java.util.Vector;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 
 import org.jsoup.*;
 import org.jsoup.nodes.Document;
@@ -17,11 +29,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 public class home {
-	static LinkedList<Player> Players;
-
+	static Vector<Player> Players;
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
-		Players=new LinkedList<Player>();
+		Players=new Vector<Player>();
 		JFrame frame= new JFrame();
 		JPanel panel=new JPanel();
 		JLabel minP=new JLabel("Enter Min Price");
@@ -31,10 +42,11 @@ public class home {
 		JTextField maxF=new JTextField();
 		maxF.setPreferredSize(new Dimension(50,25));
 		JTextArea results=new JTextArea();
-		results.setPreferredSize(new Dimension(680,300));
+		JScrollPane rp=new JScrollPane();
+		rp.setPreferredSize(new Dimension(680,300));
+		rp.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		JButton search=new JButton("Search");
-		search.addActionListener( new ActionListener(){
-			
+		search.addActionListener( new ActionListener(){	
 			public void actionPerformed (ActionEvent e)
 			{
 				Players.clear();
@@ -43,23 +55,60 @@ public class home {
 				int max=Integer.parseInt(maxF.getText());
 				int pages=getPages(min,max);
 				getPlayers(pages,min,max);
-				if(!Players.isEmpty())
-				{
-					for(int i=0;i<Players.size();i++)
-					{
-						results.append(Players.get(i).toString()+"\n");
-					}
-				}
-				
+				JList<Player> list=new JList<Player>(Players);
+				list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+				list.setLayoutOrientation(JList.VERTICAL);
+				list.setSelectedIndex(-1);
+				/*MouseListener mouseListener = new MouseAdapter() {
+				      public void mouseClicked(MouseEvent mouseEvent) {
+				        JList theList = (JList) mouseEvent.getSource();
+				        if (mouseEvent.getClickCount() == 2) {
+				          int index = theList.locationToIndex(mouseEvent.getPoint());
+				          if (index >= 0) {
+				            Object o = theList.getModel().getElementAt(index);
+				            System.out.println("Double-clicked on: " + o.toString());
+				          }
+				        }
+				      }
+				    };*/
+				MouseListener mouseListener = new MouseAdapter() {
+				      public void mouseClicked(MouseEvent mouseEvent) {
+				        JList<Player> theList = (JList<Player>) mouseEvent.getSource();
+				        if (mouseEvent.getClickCount() == 2) {
+				          int index = theList.locationToIndex(mouseEvent.getPoint());
+				          if (index >= 0) {
+				            String ID = theList.getModel().getElementAt(index).getID();
+				           // System.out.println("Double-clicked on: " + o.toString());
+				            try {
+								URL url=new URL("http://theshownation.com/marketplace/listing?item_ref_id="+ID);
+								try {
+									openWebpage(url.toURI());
+								} catch (URISyntaxException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+				            } catch (MalformedURLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+				          }
+				        }
+				      }
+				    };
+				    
+				    
+				    list.addMouseListener(mouseListener);
+				rp.setViewportView(list);				
 				
 			}
-		});		
+		});
+		
 		panel.add(minP);
 		panel.add(minF);
 		panel.add(maxP);
 		panel.add(maxF);
 		panel.add(search);
-		panel.add(results);
+		panel.add(rp);
 		frame.add(panel);
 		frame.pack();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -91,7 +140,7 @@ public class home {
 		
 		return count;
 	}
-
+	
 	public static void getPlayers(int size,int min, int max)
 	{
 		if(size>0)
@@ -109,9 +158,8 @@ public class home {
 						int index=refidhtml.indexOf("d=",0)+2;
 						String refid=refidhtml.substring(index, index+5);
 						String name=n.text();
-						System.out.println("Name: "+name+" ID: "+refid);
 						Player player=new Player(name,refid);
-						Players.add(player);
+						Players.add(player);						
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -121,4 +169,15 @@ public class home {
 		}
 	}
 	
+	public static void openWebpage(URI uri) {
+	    Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+	    if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
+	        try {
+	            desktop.browse(uri);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+	}
+
 }
